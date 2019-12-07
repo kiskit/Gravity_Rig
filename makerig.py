@@ -28,7 +28,7 @@ class vertex_map_item(object):
     distance = -1
     # array of edgesindexes for this node
     edgesIdx = None
-    # whether the node has been visited
+    # whether the node has been visited (IMPORTANT TO AVOID INFINITE RECURSIONS!!)
     visited = False
     # connected nodes
     neighbors = None
@@ -178,25 +178,36 @@ def make_bones(tree, rig, armature):
     bpy.ops.object.editmode_toggle()
 
 
-def link_bone_to_empty(pose_bone, empty):
+def add_bone_constraint(pose_bone, empty):
     ik = pose_bone.constraints.new(type='IK')
     ik.target = empty
     ik.chain_count = 1
 
-def add_bone_constraint(node, rig, armature):
+def add_bones_constraints(node, rig, armature):
     print(node)
     if node.bone_name != None:
         # print(node.bone_name)
         # print(rig.data.bones[node.bone_name])
         pose_bone = rig.pose.bones[node.bone_name]
-        link_bone_to_empty(pose_bone, node.empty)
+        add_bone_constraint(pose_bone, node.empty)
     for child in node.children:
-        add_bone_constraint(child, rig, armature)
-        
-def add_bones_constraints(tree, rig, armature):
-    # bpy.ops.object.posemode_toggle()
-    add_bone_constraint(tree, rig, armature)
-    # bpy.ops.object.posemode_toggle()
+        add_bones_constraints(child, rig, armature)
+
+
+def assign_vertices_to_group(node, vertex_group, min_value, method):
+    # root is always 1
+    if (node.parent == None):
+        add(node.vertex_index, 1.0, 'ADD')
+    # children_number = len(node.children)
+    # # leaf is always mean
+    # if (children_number == 0):
+    #     return min_value
+    # value = 0
+    # for child in node.children:
+    #     child_value = assign_vertices_to_group(child, vertex_group)
+    #     # Ponderate value among children
+    #     value += (child_value / children_number)
+    # return value
 
 def make_gravity_rig(reference_object, target_object, context):
     target_object_edges = target_object.data.edges
@@ -222,3 +233,14 @@ def make_gravity_rig(reference_object, target_object, context):
         make_bones(tree, rig, armature)
     for tree in tree_set:
         add_bones_constraints(tree, rig, armature)
+    vertex_group = target_object.vertex_groups.new(name="__gravity_rig__")
+    min_value = 0
+    for tree in tree_set:
+        assign_vertices_to_group(tree, vertex_group, min_value, method )
+    # Make vertex group
+    # Make collection
+    # Add cloth sim
+    # Address location issue
+    # Address modes (edit vs intial mode)
+    # Add controls (no faces, vertex #)
+    
