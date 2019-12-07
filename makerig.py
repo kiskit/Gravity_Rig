@@ -5,6 +5,7 @@ class tree_node(object):
     edge_index: None
     empty: None
     vertex_index: None
+    bone_name: None
     coordinates: None
     def __init__(self):
         self.children = []
@@ -15,7 +16,8 @@ class tree_node(object):
         for child in self.children:
             result += child.prettyprint(tab)
         return result
-
+    def set_bone_name(self, name):
+        self.bone_name = name
     def __str__(self):
         return self.prettyprint("|-")
  
@@ -162,17 +164,39 @@ def make_bones_from_tree(node, parent_node, parent_bone, armature):
     bone = None
     if parent_node != None:
         bone = create_bone(parent_node.coordinates, node.coordinates, parent_bone, armature)
+        node.set_bone_name(bone.name)
+    else:
+        node.bone_name = None
     for child in node.children:
         make_bones_from_tree(child, node, bone, armature)
     
-
-
 def make_bones(tree, rig, armature):
     bpy.context.view_layer.objects.active = rig
     bpy.context.view_layer.update()
     bpy.ops.object.editmode_toggle()
     make_bones_from_tree(tree, None, None, armature)
     bpy.ops.object.editmode_toggle()
+
+
+def link_bone_to_empty(pose_bone, empty):
+    ik = pose_bone.constraints.new(type='IK')
+    ik.target = empty
+    ik.chain_count = 1
+
+def add_bone_constraint(node, rig, armature):
+    print(node)
+    if node.bone_name != None:
+        # print(node.bone_name)
+        # print(rig.data.bones[node.bone_name])
+        pose_bone = rig.pose.bones[node.bone_name]
+        link_bone_to_empty(pose_bone, node.empty)
+    for child in node.children:
+        add_bone_constraint(child, rig, armature)
+        
+def add_bones_constraints(tree, rig, armature):
+    # bpy.ops.object.posemode_toggle()
+    add_bone_constraint(tree, rig, armature)
+    # bpy.ops.object.posemode_toggle()
 
 def make_gravity_rig(reference_object, target_object, context):
     target_object_edges = target_object.data.edges
@@ -196,3 +220,5 @@ def make_gravity_rig(reference_object, target_object, context):
     rig, armature = make_empty_rig(target_object)
     for tree in tree_set:
         make_bones(tree, rig, armature)
+    for tree in tree_set:
+        add_bones_constraints(tree, rig, armature)
