@@ -1,66 +1,63 @@
 import bpy
 
 from . makerig import make_gravity_rig
+def create_custom_mesh (name, location):
+    vertex_list=[
+        (-1, 0, 0), #0
+        (0, 0, 0), #1
+        (1, 1, 0), #2
+        (1, 2, 0), #3
+        (2, 1, 0), #4
+        (2, 2, 0), #5
+        (1, -1, 0), #6
+    #    (3, 3, 0), #7
+    #    (3, 4, 0) #8
+        ]
+    edges_list = [
+        (0, 1),
+        (1, 2),
+        (2, 3),
+        (2, 4),
+        (4, 5),
+        (1, 6),
+    #    (7, 8)
+    ]
 
+    mesh = bpy.data.meshes.new(name)  # add the new mesh
+    ob = bpy.data.objects.new(mesh.name,mesh)
+    col = bpy.data.collections.get("Collection")
+    col.objects.link(ob)
+    bpy.context.view_layer.objects.active = ob
+    mesh.from_pydata(vertex_list, edges_list, [])
+    ob.location = location
+    return ob
+    # make empties @ each vertex
+    # make bone wherever there is a connection
+    # make bone parenting
+    # make bone constraints
+    # amt = bpy.data.armatures.new("vBones")
+    # rig = bpy.data.objects.new('vRig', amt)
+    # bpy.context.collection.objects.link(rig)
+    # bpy.context.view_layer.objects.active = rig
+    # bpy.context.view_layer.update()
 
-
-def create_custom_mesh(objname, px, py, pz):
+    # for v in vertex_list:
+    #     empty = bpy.data.objects.new("empty", None)
+    #     bpy.context.scene.collection.objects.link( empty )
+    #     empty.location = v
+    # bpy.ops.object.editmode_toggle()
+    # #bones_list = []
+    # for i in range(0, len(edges_list)):
+    #     bone = amt.edit_bones.new(str(i + 1))
+    #     bone.head = vertex_list[edges_list[i][0]]
+    #     bone.tail = vertex_list[edges_list[i][1]]
+    # #    bones_list[i] = bone
+    # for i in range(0, len(bones_list)):
     
-    # Define arrays for holding data    
-    myvertices = []
-    myfaces = []
-    myedges = []
-    # Create all Vertices
-
-    # vertex 0
-    mypoint = [(0.0, -1.0, 0.0)]
-    myvertices.extend(mypoint)
-
-    # vertex 1
-    mypoint = [(1.0, -1.0, 0.0)]
-    myvertices.extend(mypoint)
-    myegde=[{0,1}]
-    myedges.extend(myegde)
-    # vertex 2
-    mypoint = [(-1.0, 1.0, 0.0)]
-    myvertices.extend(mypoint)
-    myegde=[{1,2}]
-    myedges.extend(myegde)
     
-    # vertex 3
-    mypoint = [(1.0, 1.0, 0.0)]
-    myvertices.extend(mypoint)
-    myegde=[{2,3}]
-    myedges.extend(myegde)
-    
-
-    # -------------------------------------
-    # Create all Faces
-    # -------------------------------------
-    #myface = [(0, 1, 3, 2)]
-    #myfaces.extend(myface)
-
-
-    mymesh = bpy.data.meshes.new(objname)
-
-    myobject = bpy.data.objects.new(objname, mymesh)
-    bpy.context.collection.objects.link(myobject)
-    #bpy.context.scene.objects.link(myobject)
-
-    # Generate mesh data
-    mymesh.from_pydata(myvertices, myedges, [])
-    # Calculate the edges
-    mymesh.update(calc_edges=True)
-
-    # Set Location
-    myobject.location.x = px
-    myobject.location.y = py
-    myobject.location.z = pz
-    
-    return myobject
-
-
-
+    #     None
+    # bpy.ops.object.editmode_toggle()
+        
 class SelectReferenceObject(bpy.types.Operator):
     bl_idname = "gravityrig.selectreference"
     bl_label= "Gravity Rig Select Reference"
@@ -73,11 +70,13 @@ class SelectReferenceObject(bpy.types.Operator):
         SelectReferenceObject.reference_object = bpy.context.view_layer.objects.active
         print("selected ref object", SelectReferenceObject.reference_object)
         print("Active", bpy.context.view_layer.objects.active)
-        o = create_custom_mesh("target", 0, 3, 0)
+        o = create_custom_mesh("target", (2, 2, 0))
         bpy.context.view_layer.objects.active = o
         print("Active", bpy.context.view_layer.objects.active)
+        bpy.ops.object.select_all(action='DESELECT')
         o = bpy.data.objects["target"]
         bpy.data.objects["target"].select_set(True)
+        o.select_set(True)
         print("Target", o)
         print("Active", bpy.context.view_layer.objects.active)
         bpy.context.view_layer.objects.active = o

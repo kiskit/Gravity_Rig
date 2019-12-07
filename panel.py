@@ -6,7 +6,7 @@ class Gravity_Rig_Panel(bpy.types.Panel):
     bl_label= "Gravity Rig"
     bl_category = "Gravity Rig"
     bl_space_type = "VIEW_3D"
-    bl_order = 999
+    bl_order = 0
     bl_region_type = "UI"
 
     def draw(self, context):

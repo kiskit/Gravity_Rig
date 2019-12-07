@@ -1,14 +1,13 @@
 import bpy
-
 class tree_node(object):
-    # members
-    coordinates = None
-    children = None
-    index = -1
-
+    children: None
+    parent: None
+    edge_index: None
+    empty: None
+    vertex_index: None
+    coordinates: None
     def __init__(self):
         self.children = []
-
     def prettyprint(self, tab):
         result = "\n"
         result += tab + "co " + str(self.coordinates)
@@ -19,13 +18,10 @@ class tree_node(object):
 
     def __str__(self):
         return self.prettyprint("|-")
-
-    def add_child(self, obj):
-        self.children.append(obj)
-
+ 
 class vertex_map_item(object):
-    # index of vertex in vertices array
-    index = -1
+    # vertex_index of vertex in vertices array
+    vertex_index = -1
     # distance to reference object
     distance = -1
     # array of edgesindexes for this node
@@ -44,20 +40,19 @@ class vertex_map_item(object):
         self.edgesIdx.add(newEdge)
     def add_neighbor(self, neighbor):
         self.neighbors.add(neighbor)
+    def __str__(self):
+        return ("Index " + str(self.vertex_index) + " distance " + str(self.distance) + " edges " + str(self.edgesIdx) + " visited " + str(self.visited) + " neighbors " + str(self.neighbors))
     # Comparison operator for sorting
     def __lt__(self, other):
         return self.distance < other.distance
-
-
-def relative_coordinates(coordinates, target_object):
-    return coordinates - target_object.location
-
-def make_dictionary(edges, target_object, reference_object):
+       
+        
+def make_dictionary(target_object, reference_location):
+    edges = target_object.data.edges
     # Our main dictionary
     dictionary = {}
     # we want to obtain a dictionary of vertices, for which we have the list of edges
     # and of neighboring vertices
-    v1 = reference_object.location
     for i in range(len(edges)):
         # For both vertices
         for j in range(2):
@@ -65,8 +60,8 @@ def make_dictionary(edges, target_object, reference_object):
             if (entry == None):
                 entry = vertex_map_item()
                 v2 = target_object.data.vertices[edges[i].vertices[j]].co
-                entry.index = edges[i].vertices[j]
-                entry.distance = (v2 - v1).length
+                entry.vertex_index = edges[i].vertices[j]
+                entry.distance = (v2 - reference_location).length
                 entry.add_edge(i)
                 # adds the other vertex
                 entry.add_neighbor(edges[i].vertices[(j + 1) % 2])
@@ -76,193 +71,75 @@ def make_dictionary(edges, target_object, reference_object):
                 entry.add_neighbor(edges[i].vertices[(j + 1) % 2])
     return dictionary
 
-
-def get_nodes_of_tree(dictionary, root_node, vertex_map_item, vertices):
+def get_nodes_of_tree2(dictionary, root_node, vertex_map_item, vertices):
     vertex_map_item.visited = True
-    root_node.coordinates = vertices[vertex_map_item.index].co
-    root_node.index = vertex_map_item.index
+    root_node.coordinates = vertices[vertex_map_item.vertex_index].co
+    root_node.vertex_index = vertex_map_item.vertex_index
     if len(vertex_map_item.neighbors) == 0:
         return root_node
     for i in vertex_map_item.neighbors:
         child = dictionary.get(i)
         if (child.visited == False):
-            child_node_tree = get_nodes_of_tree(dictionary, tree_node(), child, vertices)
+            child_node_tree = get_nodes_of_tree2(dictionary, tree_node(), child, vertices)
             root_node.add_child(child_node_tree)
     return root_node
 
 
+def other_vertex_in_edge(vertex_index, edge):
+    if (edge.vertices[0] == vertex_index):
+        return edge.vertices[1]
+    else:
+        return edge.vertices[0]
+    
+    
+def get_nodes_of_tree(dictionary, parent_node, via_edge, vertex_map_item, vertices, edges):
+    # parent_node.coordinates = vertices[vertex_map_item.vertex_index]
+    # parent_node.vertex_index = vertex_map_item.vertex_index
+    # if we're on a leaf
+    vertex_map_item.visited = True
+    this_node = tree_node()
+    this_node.vertex_index = vertex_map_item.vertex_index
+    this_node.coordinates = vertices[this_node.vertex_index].co
+    this_node.parent = parent_node
+    this_node.edge_index = via_edge
+    for idx_of_edge_around in vertex_map_item.edgesIdx:
+        neighbor_vertex_idx = other_vertex_in_edge(vertex_map_item.vertex_index, edges[idx_of_edge_around])
+        child = dictionary.get(neighbor_vertex_idx)
+        if (child.visited == False):
+            child_tree_node = get_nodes_of_tree(dictionary, this_node, idx_of_edge_around, child, vertices, edges)
+            this_node.children.append(child_tree_node)
+    return this_node
+
 # make one or more node trees
-def make_tree_set(sorted_vertices_list, vertices, dictionary):
+def make_tree_set(sorted_vertices_list, vertices, edges, dictionary):
     tree_set = []
-    for vertex_map_item in sorted_vertices_list:
-        if not vertex_map_item.visited:
-            t_node = tree_node()
-            t_node.coordinates = vertices[vertex_map_item.index]
-            t_node.index = vertex_map_item.index
+    for vtx_map_item in sorted_vertices_list:
+        if not vtx_map_item.visited:
             # start a new tree
-            tree_set.append(get_nodes_of_tree(dictionary, t_node, vertex_map_item, vertices))
+            tree_set.append(get_nodes_of_tree(dictionary, None, None, vtx_map_item, vertices, edges))
     return tree_set
 
-
-def create_empty(location, index, target_object):
-    # print(location, index, target_object)
+def create_empty(vertex_index, target_object):
+    # print(location, vertex_index, target_object)
     empty = bpy.data.objects.new( "empty", None )
     bpy.context.scene.collection.objects.link( empty )
-    empty.location = location
     empty.empty_display_type = 'CUBE'
     empty.scale = (0.25, 0.25, 0.25)
     empty.parent = target_object
     empty.parent_type = 'VERTEX'
     # change for vertex index
-    empty.parent_vertices[0] = index
+    empty.parent_vertices[0] = vertex_index
     bpy.ops.object.location_clear(clear_delta=False)
     bpy.ops.object.rotation_clear(clear_delta=False)
     return empty
 
-def bone_name(tree_idx, idx):
-    return str(1000*tree_idx + idx)
+def make_empties(node, target_object):
+    empty = create_empty(node.vertex_index, target_object)
+    node.empty = empty
+    for child in node.children:
+        make_empties(child, target_object)
 
-def create_bone2(tree_idx, head_location, tail_location, parent_bone, armature, rig, index, empty):
-    bpy.context.view_layer.objects.active = rig
-    bpy.context.view_layer.update()
-    bpy.ops.object.editmode_toggle()
-
-    # Add and setup bone
-    bone = armature.edit_bones.new(bone_name(tree_idx, index))
-    if (head_location != None):
-         bone.head = head_location
-    if (tail_location != None):
-        bone.tail = tail_location
-    if (parent_bone != None):
-        print("Idx", index, "parenting bone", bone, "to", parent_bone)
-        bone.parent = parent_bone
-        if (bone.parent != parent_bone):
-            print("Error parenting")
-        bone.use_connect = True
-    else:
-        print("Idx", index, "not parenting bone", bone)
-    bpy.ops.object.editmode_toggle()
-
-    # bpy.ops.object.posemode_toggle()
-    # Add IK constraint
-    # armature.bones[len(armature.bones) - 1].select = True
-    # armature.bones.active = armature.bones[len(armature.bones) - 1]
-    # print("Active bone", armature.bones.active)
-    # pose_bone = bpy.context.selected_pose_bones_from_active_object[
-    #     len(bpy.context.selected_pose_bones_from_active_object) - 1]
-    # ik = pose_bone.constraints.new(type='IK')
-    # ik.target = empty
-    # ik.chain_count = 1
-    # bpy.ops.object.posemode_toggle()
-    return bone
-
-
-def make_rig(node, tree_idx, parent_node, rig, armature, bone, idx, target_object, empties_dictionary):
-    # if we're a leaf (no children), do nothing and return
-    # If we're not a leaf (root node or other node)
-    if len(node.children) != 0:
-        if parent_node == None:
-            # no parent: we're the root
-            # Create an empty
-            empty_root = create_empty(relative_coordinates(node.coordinates, target_object), node.index, target_object)
-            empties_dictionary.add(idx, empty_root)
-        for child in node.children:
-            idx += 1
-            print("For idx", idx,"node","Bone " + str(node))
-            empty = create_empty(child.coordinates, child.index, target_object)
-            empties_dictionary.add(idx, empty)
-            # Create a bone
-            #child_bone = create_bone(tree_idx, node.coordinates, child.coordinates, bone, armature, rig, idx, empty)
-            #idx = make_rig(child, tree_idx, node, rig, armature, child_bone, idx, target_object)
-            idx = make_rig(child, tree_idx, node, rig, armature, None, idx, target_object, empties_dictionary)
-    return idx
-
-
-
-def create_bone(empties_dictionary, bones_dictionary, index, parent_index, rig, armature):
-    bpy.context.view_layer.objects.active = rig
-    bpy.context.view_layer.update()
-    bpy.ops.object.editmode_toggle()
-    # Add and setup bone
-    print("indexes", index, parent_index)
-    bone = armature.edit_bones.new(str(index))
-    print("Inserting bone", bone,"at index", index)
-    bones_dictionary[index] = bone
-    empty = empties_dictionary[parent_index]
-    bone.head = empty.location
-    empty = empties_dictionary[index]
-    bone.tail = empty.location
-    print("Bones dictionary", len(bones_dictionary), bones_dictionary)
-    for key in bones_dictionary.keys():
-        print(key, bones_dictionary[key])
-    if (parent_index != 0):
-        print("parenting bone", index,"to", parent_index)
-        parent_bone = bones_dictionary[parent_index]
-        print("Found parent bone", parent_bone)
-        bone.parent = parent_bone
-        bone.use_connect = True
-    bpy.ops.object.editmode_toggle()
-    return bone
-
-    
-def make_bones(node, idx, bones_dictionary, empties_dictionary, target_object, rig, armature):
-    if (len(node.children) != 0):
-        my_index = idx
-        for child in node.children:
-            idx += 1
-            bone = create_bone(empties_dictionary, bones_dictionary, idx, my_index, rig, armature)
-            idx = make_bones(child, idx, bones_dictionary, empties_dictionary, target_object, rig, armature)
-    return idx
-            
-
-def make_empties(node, parent_node, idx, empties_dictionary, target_object):
-    if len(node.children) != 0:
-        if parent_node == None:
-            empty = create_empty(node.coordinates, node.index, target_object)
-            empties_dictionary[idx] = empty
-        for child in node.children:
-            idx += 1
-            empty = create_empty(child.coordinates, child.index, target_object)
-            empties_dictionary[idx] = empty
-            idx = make_empties(child, node, idx, empties_dictionary, target_object)
-    return idx
-
-# careful: each vertex may have seeral children
-# so we can either take the max value or the min or average
-# def recursive weight():
-#     if len(tree_node.children) == 0:
-#         # We're on a leaf
-#         # Add to pin vertex group with min value
-#         None
-#     else
-        
-# falloff_function: whether we want quadratic, linear, etc
-# distance_function: whether we use distance from reference, metric distance from root or chain length from root
-# def calculate_weights(tree_node, falloff_function, distance_function, max_value, min_value, pin_vertex_group):
-#     None
-    
-
-# reference_object
-#   object the distance to which will be our sorting criterium
-# target_object
-#   object from which the armature will be generated and parented to
-def make_gravity_rig(reference_object, target_object, context):
-    target_object_edges = target_object.data.edges
-    target_object_vertices = target_object.data.vertices
-    reference_location = reference_object.location
-    dictionary = make_dictionary(target_object_edges, target_object, reference_object)
-
-    sorted_vertices_list = []
-    for key, value in sorted(dictionary.items(), key=lambda item: item[1]):
-        sorted_vertices_list.append(value)
-
-    tree_set = make_tree_set(sorted_vertices_list, target_object_vertices, dictionary)
-
-    print("Got ", len(tree_set), "trees")
-    for tree in tree_set:
-        print(str(tree))
-
-    # Add armature and rig
+def make_empty_rig(target_object):
     armature = bpy.data.armatures.new(target_object.name + "_vBones")
     rig = bpy.data.objects.new(target_object.name + '_vRig', armature)
     rig.location = target_object.location
@@ -270,31 +147,52 @@ def make_gravity_rig(reference_object, target_object, context):
     bpy.context.collection.objects.link(rig)
     bpy.context.view_layer.objects.active = rig
     bpy.context.view_layer.update()
-    save_location = target_object.location
-    empties_dictionary = dict()
-    for tree_idx in range(len(tree_set)):
-        make_empties(tree_set[tree_idx], None, 0, empties_dictionary, target_object)
-    print("Empties", len(empties_dictionary), empties_dictionary)
-    for key in empties_dictionary.keys():
-        print(key, empties_dictionary[key])
-    bones_dictionary = dict()
-    for tree_idx in range(len(tree_set)):
-        make_bones(tree_set[tree_idx], 0, bones_dictionary, empties_dictionary, target_object, rig, armature)
-    
-    print("Bones", len(bones_dictionary), bones_dictionary)
-    for key in bones_dictionary.keys():
-        print(key, bones_dictionary[key])
-        #make_rig(tree_set[tree_idx], tree_idx, None, rig, armature, None, 0, target_object, empties_dictionary)
-    for key in empties_dictionary.keys():
-        empties_dictionary[key].location=(0, 0, 0)
-        
+    return rig, armature
 
+def create_bone(head, tail, parent, armature):
+    bone = armature.edit_bones.new("Bone")
+    bone.head = head
+    bone.tail = tail
+    if parent != None:
+        bone.parent = parent
+        bone.use_connect = True
+    return bone
+    
+def make_bones_from_tree(node, parent_node, parent_bone, armature):
+    bone = None
+    if parent_node != None:
+        bone = create_bone(parent_node.coordinates, node.coordinates, parent_bone, armature)
+    for child in node.children:
+        make_bones_from_tree(child, node, bone, armature)
     
 
-    # Affects vertex group to target object
-    # bpy.context.view_layer.objects.active = target_object
-    # target_object.vertex_group_add("gravity_rig")
-    # Affect weights to vertex group according to selected falloff/gradient
-    #for tree in tree_set:
-    #    calculate_weights(rig_vertex_group, falloff, max_value, min_value)
-    # Add cloth sim to target object with parameters
+
+def make_bones(tree, rig, armature):
+    bpy.context.view_layer.objects.active = rig
+    bpy.context.view_layer.update()
+    bpy.ops.object.editmode_toggle()
+    make_bones_from_tree(tree, None, None, armature)
+    bpy.ops.object.editmode_toggle()
+
+def make_gravity_rig(reference_object, target_object, context):
+    target_object_edges = target_object.data.edges
+    target_object_vertices = target_object.data.vertices
+    reference_location = reference_object.location
+
+    # Make dictionary of vertices with distance info
+    dictionary = make_dictionary(target_object, reference_location)
+    
+    sorted_vertices_list = []
+    for key, value in sorted(dictionary.items(), key=lambda item: item[1]):
+        sorted_vertices_list.append(value)
+
+    tree_set = make_tree_set(sorted_vertices_list, target_object_vertices, target_object_edges, dictionary)
+    print("Got ", len(tree_set), "trees")
+    for tree in tree_set:
+        print(str(tree))
+    
+    for tree in tree_set:
+        make_empties(tree, target_object)
+    rig, armature = make_empty_rig(target_object)
+    for tree in tree_set:
+        make_bones(tree, rig, armature)
