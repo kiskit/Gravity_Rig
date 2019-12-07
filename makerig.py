@@ -184,7 +184,6 @@ def add_bone_constraint(pose_bone, empty):
     ik.chain_count = 1
 
 def add_bones_constraints(node, rig, armature):
-    print(node)
     if node.bone_name != None:
         # print(node.bone_name)
         # print(rig.data.bones[node.bone_name])
@@ -194,10 +193,30 @@ def add_bones_constraints(node, rig, armature):
         add_bones_constraints(child, rig, armature)
 
 
-def assign_vertices_to_group(node, vertex_group, min_value, method):
-    # root is always 1
-    if (node.parent == None):
-        add(node.vertex_index, 1.0, 'ADD')
+def add_index_to_vertex_group(vertex_group, index, value):
+    arr=[]
+    arr.append(index)
+    vertex_group.add(arr, value, 'ADD')
+
+def assign_vertices_to_group(node, vertex_group, min_value, method, depth = 0):
+    
+    children_number = len(node.children)
+    # leaf is always mean
+    if (children_number == 0):
+        add_index_to_vertex_group(vertex_group, node.vertex_index, min_value)
+        return depth
+    max_depth = depth
+    for child in node.children:
+        max_depth = max(max_depth, assign_vertices_to_group(child, vertex_group, min_value, method, depth + 1))
+    #print("Vertex ", node.coordinates, "max depth", max_depth, "depth", depth)
+    if (depth == 0):
+        # root is always 1
+        add_index_to_vertex_group(vertex_group, node.vertex_index, 1.0)    
+    else:
+        value = (1 - min_value) / depth
+        #print("--- Assigning value of", value)
+        add_index_to_vertex_group(vertex_group, node.vertex_index, value)
+    return max_depth
     # children_number = len(node.children)
     # # leaf is always mean
     # if (children_number == 0):
@@ -236,7 +255,11 @@ def make_gravity_rig(reference_object, target_object, context):
     vertex_group = target_object.vertex_groups.new(name="__gravity_rig__")
     min_value = 0
     for tree in tree_set:
-        assign_vertices_to_group(tree, vertex_group, min_value, method )
+        assign_vertices_to_group(tree, vertex_group, min_value, 'LINEAR' )
+    mod = target_object.modifiers.new("GravityRigCloth", 'CLOTH')
+    mod.settings.vertex_group_mass = vertex_group.name
+
+    #mod.shape.
     # Make vertex group
     # Make collection
     # Add cloth sim
