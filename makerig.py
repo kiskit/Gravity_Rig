@@ -218,18 +218,30 @@ def assign_vertices_to_group(node, vertex_group, min_value, method, depth = 0):
         print("--- Assigning value of", value)
         add_index_to_vertex_group(vertex_group, node.vertex_index, value)
     return max_depth
-    # children_number = len(node.children)
-    # # leaf is always mean
-    # if (children_number == 0):
-    #     return min_value
-    # value = 0
-    # for child in node.children:
-    #     child_value = assign_vertices_to_group(child, vertex_group)
-    #     # Ponderate value among children
-    #     value += (child_value / children_number)
-    # return value
+
+def cleanup_previous_rigs(target_object, rig_name, vertex_group_name, cloth_sim_name):
+    # remove cloth sim
+    modifier_to_remove = None
+    for modifier in target_object.modifiers:
+        if modifier.type == 'CLOTH':
+            print ("Removing modifier", modifier)
+            modifier_to_remove = modifier
+            break        
+    if (modifier_to_remove != None):
+        target_object.modifiers.remove(modifier_to_remove)
+    vg = target_object.vertex_groups.get(vertex_group_name)
+    if (vg != None):
+        print("Removing", vg)
+        target_object.vertex_groups.remove(vg)
+    # remove empties
+    # remove vertex_group
+    # remove rig
+    
 
 def make_gravity_rig(reference_object, target_object, min_value, context):
+    #cleanup object stuff
+    cleanup_previous_rigs(target_object, "__gravity_rig__", "__gravity_rig__", "GravityRigCloth")
+    
     target_object_edges = target_object.data.edges
     target_object_vertices = target_object.data.vertices
     reference_location = reference_object.location
