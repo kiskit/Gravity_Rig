@@ -204,17 +204,18 @@ def assign_vertices_to_group(node, vertex_group, min_value, method, depth = 0):
     # leaf is always mean
     if (children_number == 0):
         add_index_to_vertex_group(vertex_group, node.vertex_index, min_value)
+        print("assigning value of", min_value)
         return depth
     max_depth = depth
     for child in node.children:
         max_depth = max(max_depth, assign_vertices_to_group(child, vertex_group, min_value, method, depth + 1))
-    #print("Vertex ", node.coordinates, "max depth", max_depth, "depth", depth)
+    print("Vertex ", node.coordinates, "max depth", max_depth, "depth", depth)
     if (depth == 0):
         # root is always 1
         add_index_to_vertex_group(vertex_group, node.vertex_index, 1.0)    
     else:
-        value = (1 - min_value) / depth
-        #print("--- Assigning value of", value)
+        value = 1- ((1 - min_value) * depth/max_depth)
+        print("--- Assigning value of", value)
         add_index_to_vertex_group(vertex_group, node.vertex_index, value)
     return max_depth
     # children_number = len(node.children)
@@ -228,7 +229,7 @@ def assign_vertices_to_group(node, vertex_group, min_value, method, depth = 0):
     #     value += (child_value / children_number)
     # return value
 
-def make_gravity_rig(reference_object, target_object, context):
+def make_gravity_rig(reference_object, target_object, min_value, context):
     target_object_edges = target_object.data.edges
     target_object_vertices = target_object.data.vertices
     reference_location = reference_object.location
@@ -253,7 +254,6 @@ def make_gravity_rig(reference_object, target_object, context):
     for tree in tree_set:
         add_bones_constraints(tree, rig, armature)
     vertex_group = target_object.vertex_groups.new(name="__gravity_rig__")
-    min_value = 0
     for tree in tree_set:
         assign_vertices_to_group(tree, vertex_group, min_value, 'LINEAR' )
     mod = target_object.modifiers.new("GravityRigCloth", 'CLOTH')

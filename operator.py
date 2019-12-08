@@ -72,15 +72,15 @@ class SelectReferenceObject(bpy.types.Operator):
         print("Active", bpy.context.view_layer.objects.active)
         o = create_custom_mesh("target", (2, 2, 0))
         bpy.context.view_layer.objects.active = o
-        print("Active", bpy.context.view_layer.objects.active)
+        # print("Active", bpy.context.view_layer.objects.active)
         bpy.ops.object.select_all(action='DESELECT')
-        o = bpy.data.objects["target"]
+        # o = bpy.data.objects["target"]
         bpy.data.objects["target"].select_set(True)
-        o.select_set(True)
-        print("Target", o)
-        print("Active", bpy.context.view_layer.objects.active)
-        bpy.context.view_layer.objects.active = o
-        bpy.ops.object.transform_apply(location = True, scale = True, rotation = True)
+        # o.select_set(True)
+        # print("Target", o)
+        # print("Active", bpy.context.view_layer.objects.active)
+        # bpy.context.view_layer.objects.active = o
+        # bpy.ops.object.transform_apply(location = True, scale = True, rotation = True)
         return{'FINISHED'}
 
 
@@ -96,6 +96,8 @@ class MakeRig(bpy.types.Operator):
         if (target_object == None):
             return {'CANCELLED'}
         print("generating rig")
-        make_gravity_rig(SelectReferenceObject.reference_object, target_object, context)
+        prefs = context.preferences.addons["GravityRig"].preferences
+        print("min value", prefs.min_value)
+        make_gravity_rig(SelectReferenceObject.reference_object, target_object, prefs.min_value, context)
         return{'FINISHED'}
 
