@@ -3,3 +3,4 @@ Make it work with other functions than linear
 Make collections
 Make reference a bone so that rig can be added to existing armature
 Find a way to parent to head
+Make sure deleting doesn't leave armarture pending

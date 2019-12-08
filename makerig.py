@@ -1,4 +1,8 @@
 import bpy
+
+
+created_objects=[]
+
 class tree_node(object):
     children: None
     parent: None
@@ -133,6 +137,7 @@ def create_empty(vertex_index, target_object):
     empty.parent_vertices[0] = vertex_index
     bpy.ops.object.location_clear(clear_delta=False)
     bpy.ops.object.rotation_clear(clear_delta=False)
+    created_objects.append(empty)
     return empty
 
 def make_empties(node, target_object):
@@ -149,6 +154,7 @@ def make_empty_rig(target_object):
     bpy.context.collection.objects.link(rig)
     bpy.context.view_layer.objects.active = rig
     bpy.context.view_layer.update()
+    created_objects.append(rig)
     return rig, armature
 
 def create_bone(head, tail, parent, armature):
@@ -220,6 +226,10 @@ def assign_vertices_to_group(node, vertex_group, min_value, method, depth = 0):
     return max_depth
 
 def cleanup_previous_rigs(target_object, rig_name, vertex_group_name, cloth_sim_name):
+    print("Created previously", len(created_objects))
+    for obj in created_objects:
+        print("Removing", obj)
+        bpy.data.objects.remove(obj, do_unlink=True )
     # remove cloth sim
     modifier_to_remove = None
     for modifier in target_object.modifiers:
