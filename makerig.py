@@ -3,7 +3,7 @@ import bpy
 
 class created_objects(object):
     # static list of 
-    objects_list=[]
+    empties_list=[]
 
 class tree_node(object):
     children: None
@@ -127,7 +127,7 @@ def make_tree_set(sorted_vertices_list, vertices, edges, dictionary):
             tree_set.append(get_nodes_of_tree(dictionary, None, None, vtx_map_item, vertices, edges))
     return tree_set
 
-def create_empty(vertex_index, target_object):
+def create_empty(vertex_index, target_object, empties_collection):
     # print(location, vertex_index, target_object)
     empty = bpy.data.objects.new( "empty", None )
     bpy.context.scene.collection.objects.link( empty )
@@ -139,14 +139,16 @@ def create_empty(vertex_index, target_object):
     empty.parent_vertices[0] = vertex_index
     bpy.ops.object.location_clear(clear_delta=False)
     bpy.ops.object.rotation_clear(clear_delta=False)
-    created_objects.objects_list.append(empty)
+    empties_collection.objects.link(empty)
+    created_objects.empties_list.append(empty)
+    
     return empty
 
-def make_empties(node, target_object):
-    empty = create_empty(node.vertex_index, target_object)
+def make_empties(node, target_object, empties_collection):
+    empty = create_empty(node.vertex_index, target_object, empties_collection)
     node.empty = empty
     for child in node.children:
-        make_empties(child, target_object)
+        make_empties(child, target_object, empties_collection)
 
 def make_empty_rig(target_object):
     armature = bpy.data.armatures.new(target_object.name + "_vBones")
@@ -156,7 +158,8 @@ def make_empty_rig(target_object):
     bpy.context.collection.objects.link(rig)
     bpy.context.view_layer.objects.active = rig
     bpy.context.view_layer.update()
-    created_objects.objects_list.append(rig)
+    created_objects.rig = rig
+    created_objects.armature = armature
     return rig, armature
 
 def create_bone(head, tail, parent, armature):
@@ -228,8 +231,8 @@ def assign_vertices_to_group(node, vertex_group, min_value, method, depth = 0):
     return max_depth
 
 def cleanup_previous_rigs(target_object, vertex_group_name, cloth_sim_name):
-    print("Created previously", len(created_objects.objects_list))
-    for obj in created_objects.objects_list:
+    print("Created previously", len(created_objects.empties_list))
+    for obj in created_objects.empties_list:
         print("Removing", obj)
         bpy.data.objects.remove(obj, do_unlink=True )
     # remove cloth sim
@@ -238,7 +241,7 @@ def cleanup_previous_rigs(target_object, vertex_group_name, cloth_sim_name):
         if modifier.type == 'CLOTH':
             print ("Removing modifier", modifier)
             modifier_to_remove = modifier
-            break        
+            break
     if (modifier_to_remove != None):
         target_object.modifiers.remove(modifier_to_remove)
     # vertex group
@@ -247,7 +250,7 @@ def cleanup_previous_rigs(target_object, vertex_group_name, cloth_sim_name):
         print("Removing", vg)
         target_object.vertex_groups.remove(vg)
     # clean objects list
-    created_objects.objects_list = []
+    created_objects.empties_list = []
     
 
 def make_gravity_rig(reference_object, target_object, min_value, context):
@@ -269,9 +272,19 @@ def make_gravity_rig(reference_object, target_object, min_value, context):
     print("Got ", len(tree_set), "trees")
     for tree in tree_set:
         print(str(tree))
+
+
+    target_object_collection = target_object.users_collection[0]
+    #bpy.ops.outliner.collection_new(name='__gravity_rig', nested=True)
+    empties_collection = bpy.data.collections.new('__graviyty_rig__')
+    target_object_collection.children.link(empties_collection)
     
+    #bpy.context.scene.collection.children.link(new_collection)
+    #target_object_collection.objects.link(empties_collection)
+    
+
     for tree in tree_set:
-        make_empties(tree, target_object)
+        make_empties(tree, target_object, empties_collection)
     rig, armature = make_empty_rig(target_object)
     for tree in tree_set:
         make_bones(tree, rig, armature)

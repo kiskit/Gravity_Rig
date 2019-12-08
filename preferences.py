@@ -13,12 +13,16 @@ from bpy.props import (
 # @compat.make_annotations
 class GravityRigPreferences(bpy.types.AddonPreferences):
     bl_idname = "GravityRig"
-    falloff = bpy.props.EnumProperty(
-        name='Falloff',
-        items=[('LINEAR', 'Linear', "Linear falloff"),
-               ('QUADRATIC', 'Quadratic', 'Quadratic falloff'),
-               ],
-        default='LINEAR',
+    # falloff = bpy.props.EnumProperty(
+    #     name='Falloff',
+    #     items=[('LINEAR', 'Linear', "Linear falloff"),
+    #            ('QUADRATIC', 'Quadratic', 'Quadratic falloff'),
+    #            ],
+    #     default='LINEAR',
+    # )
+    
+    reference_object_name = bpy.props.StringProperty(
+        name="Reference Object"
     )
     min_value = bpy.props.FloatProperty(
         name='Min Value',

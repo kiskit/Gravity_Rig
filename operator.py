@@ -28,35 +28,12 @@ def create_custom_mesh (name, location):
     col = bpy.data.collections.get("Collection")
     col.objects.link(ob)
     bpy.context.view_layer.objects.active = ob
+    
     mesh.from_pydata(vertex_list, edges_list, [])
     ob.location = location
+    # ob.transform_apply(location = True, scale = True, rotation = True)
+    bpy.data.objects[ob.name].select_set(True)
     return ob
-    # make empties @ each vertex
-    # make bone wherever there is a connection
-    # make bone parenting
-    # make bone constraints
-    # amt = bpy.data.armatures.new("vBones")
-    # rig = bpy.data.objects.new('vRig', amt)
-    # bpy.context.collection.objects.link(rig)
-    # bpy.context.view_layer.objects.active = rig
-    # bpy.context.view_layer.update()
-
-    # for v in vertex_list:
-    #     empty = bpy.data.objects.new("empty", None)
-    #     bpy.context.scene.collection.objects.link( empty )
-    #     empty.location = v
-    # bpy.ops.object.editmode_toggle()
-    # #bones_list = []
-    # for i in range(0, len(edges_list)):
-    #     bone = amt.edit_bones.new(str(i + 1))
-    #     bone.head = vertex_list[edges_list[i][0]]
-    #     bone.tail = vertex_list[edges_list[i][1]]
-    # #    bones_list[i] = bone
-    # for i in range(0, len(bones_list)):
-    
-    
-    #     None
-    # bpy.ops.object.editmode_toggle()
         
 class SelectReferenceObject(bpy.types.Operator):
     bl_idname = "gravityrig.selectreference"
@@ -66,21 +43,9 @@ class SelectReferenceObject(bpy.types.Operator):
     reference_object=None
 
     def execute(self, context):
-        print("selecting ref object")
         SelectReferenceObject.reference_object = bpy.context.view_layer.objects.active
-        print("selected ref object", SelectReferenceObject.reference_object)
-        print("Active", bpy.context.view_layer.objects.active)
-        o = create_custom_mesh("target", (2, 2, 0))
-        bpy.context.view_layer.objects.active = o
-        # print("Active", bpy.context.view_layer.objects.active)
-        bpy.ops.object.select_all(action='DESELECT')
-        # o = bpy.data.objects["target"]
-        bpy.data.objects["target"].select_set(True)
-        # o.select_set(True)
-        # print("Target", o)
-        # print("Active", bpy.context.view_layer.objects.active)
-        # bpy.context.view_layer.objects.active = o
-        # bpy.ops.object.transform_apply(location = True, scale = True, rotation = True)
+        context.preferences.addons["GravityRig"].preferences.reference_object_name = SelectReferenceObject.reference_object.name
+        # o = create_custom_mesh("target", (2, 2, 0))
         return{'FINISHED'}
 
 
