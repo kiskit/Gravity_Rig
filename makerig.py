@@ -1,7 +1,9 @@
 import bpy
 
 
-created_objects=[]
+class created_objects(object):
+    # static list of 
+    objects_list=[]
 
 class tree_node(object):
     children: None
@@ -137,7 +139,7 @@ def create_empty(vertex_index, target_object):
     empty.parent_vertices[0] = vertex_index
     bpy.ops.object.location_clear(clear_delta=False)
     bpy.ops.object.rotation_clear(clear_delta=False)
-    created_objects.append(empty)
+    created_objects.objects_list.append(empty)
     return empty
 
 def make_empties(node, target_object):
@@ -154,7 +156,7 @@ def make_empty_rig(target_object):
     bpy.context.collection.objects.link(rig)
     bpy.context.view_layer.objects.active = rig
     bpy.context.view_layer.update()
-    created_objects.append(rig)
+    created_objects.objects_list.append(rig)
     return rig, armature
 
 def create_bone(head, tail, parent, armature):
@@ -225,9 +227,9 @@ def assign_vertices_to_group(node, vertex_group, min_value, method, depth = 0):
         add_index_to_vertex_group(vertex_group, node.vertex_index, value)
     return max_depth
 
-def cleanup_previous_rigs(target_object, rig_name, vertex_group_name, cloth_sim_name):
-    print("Created previously", len(created_objects))
-    for obj in created_objects:
+def cleanup_previous_rigs(target_object, vertex_group_name, cloth_sim_name):
+    print("Created previously", len(created_objects.objects_list))
+    for obj in created_objects.objects_list:
         print("Removing", obj)
         bpy.data.objects.remove(obj, do_unlink=True )
     # remove cloth sim
@@ -239,18 +241,18 @@ def cleanup_previous_rigs(target_object, rig_name, vertex_group_name, cloth_sim_
             break        
     if (modifier_to_remove != None):
         target_object.modifiers.remove(modifier_to_remove)
+    # vertex group
     vg = target_object.vertex_groups.get(vertex_group_name)
     if (vg != None):
         print("Removing", vg)
         target_object.vertex_groups.remove(vg)
-    # remove empties
-    # remove vertex_group
-    # remove rig
+    # clean objects list
+    created_objects.objects_list = []
     
 
 def make_gravity_rig(reference_object, target_object, min_value, context):
     #cleanup object stuff
-    cleanup_previous_rigs(target_object, "__gravity_rig__", "__gravity_rig__", "GravityRigCloth")
+    cleanup_previous_rigs(target_object, "__gravity_rig__", "GravityRigCloth")
     
     target_object_edges = target_object.data.edges
     target_object_vertices = target_object.data.vertices
