@@ -4,7 +4,12 @@ import bpy
 class created_objects(object):
     # static list of 
     empties_list=[]
-
+    empties_collection = None
+    rig = None
+    armature = None
+    modifier = None
+    vertex_group_name = None
+    
 class tree_node(object):
     children: None
     parent: None
@@ -54,7 +59,14 @@ class vertex_map_item(object):
     def __lt__(self, other):
         return self.distance < other.distance
        
-        
+def init_created_objects():
+    created_objects.empties_collection = None
+    created_objects.empties_list = []
+    created_objects.rig = None
+    created_objects.armature = None
+    created_objects.modifier = None
+    created_objects.vertex_group_name = None
+      
 def make_dictionary(target_object, reference_location):
     edges = target_object.data.edges
     # Our main dictionary
@@ -128,7 +140,6 @@ def make_tree_set(sorted_vertices_list, vertices, edges, dictionary):
     return tree_set
 
 def create_empty(vertex_index, target_object, empties_collection):
-    # print(location, vertex_index, target_object)
     empty = bpy.data.objects.new( "empty", None )
     empties_collection.objects.link(empty)
     empty.empty_display_type = 'CUBE'
@@ -150,7 +161,7 @@ def make_empties(node, target_object, empties_collection):
     for child in node.children:
         make_empties(child, target_object, empties_collection)
 
-def make_empty_rig(target_object):
+def create_empty_rig(target_object):
     armature = bpy.data.armatures.new(target_object.name + "_vBones")
     rig = bpy.data.objects.new(target_object.name + '_vRig', armature)
     rig.location = target_object.location
@@ -196,8 +207,6 @@ def add_bone_constraint(pose_bone, empty):
 
 def add_bones_constraints(node, rig, armature):
     if node.bone_name != None:
-        # print(node.bone_name)
-        # print(rig.data.bones[node.bone_name])
         pose_bone = rig.pose.bones[node.bone_name]
         add_bone_constraint(pose_bone, node.empty)
     for child in node.children:
@@ -210,52 +219,82 @@ def add_index_to_vertex_group(vertex_group, index, value):
     vertex_group.add(arr, value, 'ADD')
 
 def assign_vertices_to_group(node, vertex_group, min_value, method, depth = 0):
-    
     children_number = len(node.children)
     # leaf is always mean
     if (children_number == 0):
         add_index_to_vertex_group(vertex_group, node.vertex_index, min_value)
-        print("assigning value of", min_value)
+        #print("assigning value of", min_value)
         return depth
     max_depth = depth
     for child in node.children:
         max_depth = max(max_depth, assign_vertices_to_group(child, vertex_group, min_value, method, depth + 1))
-    print("Vertex ", node.coordinates, "max depth", max_depth, "depth", depth)
+    #print("Vertex ", node.coordinates, "max depth", max_depth, "depth", depth)
     if (depth == 0):
         # root is always 1
         add_index_to_vertex_group(vertex_group, node.vertex_index, 1.0)    
     else:
         value = 1- ((1 - min_value) * depth/max_depth)
-        print("--- Assigning value of", value)
+        #print("--- Assigning value of", value)
         add_index_to_vertex_group(vertex_group, node.vertex_index, value)
     return max_depth
 
-def cleanup_previous_rigs(target_object, vertex_group_name, cloth_sim_name):
-    print("Created previously", len(created_objects.empties_list))
+def make_collection_for_empties(target_object):
+    # Make collection for empties
+    target_object_collection = target_object.users_collection[0]
+    empties_collection = bpy.data.collections.new('__graviyty_rig__')
+    target_object_collection.children.link(empties_collection)
+    created_objects.empties_collection = empties_collection
+    return empties_collection
+
+def create_modifier(target_object, modifier_name, vertex_group):
+    mod = target_object.modifiers.new(modifier_name, 'CLOTH')
+    created_objects.modifier = mod
+    mod.settings.vertex_group_mass = vertex_group.name
+    return mod
+
+def create_vertex_group(target_object, vg_name):
+    vertex_group = target_object.vertex_groups.new(name=vg_name)
+    created_objects.vertex_group_name = vertex_group.name
+    return vertex_group
+
+def cleanup_previous_rigs(target_object):
+    # Nearly every remove can go wrong, for instance if file->new has been called
+    # so (nearly) all of them have been protected by try/except statements
+    # remove empties
     for obj in created_objects.empties_list:
-        print("Removing", obj)
-        bpy.data.objects.remove(obj, do_unlink=True )
-    # remove cloth sim
-    modifier_to_remove = None
-    for modifier in target_object.modifiers:
-        if modifier.type == 'CLOTH':
-            print ("Removing modifier", modifier)
-            modifier_to_remove = modifier
-            break
-    if (modifier_to_remove != None):
-        target_object.modifiers.remove(modifier_to_remove)
-    # vertex group
-    vg = target_object.vertex_groups.get(vertex_group_name)
-    if (vg != None):
-        print("Removing", vg)
-        target_object.vertex_groups.remove(vg)
-    # clean objects list
-    created_objects.empties_list = []
-    
+        try:
+            bpy.data.objects.remove(obj, do_unlink=True )
+        except:
+            None
+    # remove empties collection
+    if (created_objects.empties_collection != None):
+        try:
+            bpy.data.collections.remove(created_objects.empties_collection)
+        except:
+            None
+    # remove rig
+    if (created_objects.rig != None):
+        try:
+            bpy.data.objects.remove(created_objects.rig)
+        except:
+            None
+    # remove modifier
+    if (created_objects.modifier != None):
+        try:
+            target_object.modifiers.remove(created_objects.modifier)
+        except:
+            None
+    # remove vertex group
+    if (created_objects.vertex_group_name != None):
+        vg = target_object.vertex_groups.get(created_objects.vertex_group_name)
+        if (vg != None):
+            target_object.vertex_groups.remove(vg)
+    # reset created objects
+    init_created_objects()
 
 def make_gravity_rig(reference_object, target_object, min_value, context):
     #cleanup object stuff
-    cleanup_previous_rigs(target_object, "__gravity_rig__", "GravityRigCloth")
+    cleanup_previous_rigs(target_object)
     
     target_object_edges = target_object.data.edges
     target_object_vertices = target_object.data.vertices
@@ -269,29 +308,18 @@ def make_gravity_rig(reference_object, target_object, min_value, context):
         sorted_vertices_list.append(value)
 
     tree_set = make_tree_set(sorted_vertices_list, target_object_vertices, target_object_edges, dictionary)
-    print("Got ", len(tree_set), "trees")
-    for tree in tree_set:
-        print(str(tree))
-
-
-    target_object_collection = target_object.users_collection[0]
-    #bpy.ops.outliner.collection_new(name='__gravity_rig', nested=True)
-    empties_collection = bpy.data.collections.new('__graviyty_rig__')
-    target_object_collection.children.link(empties_collection)
-    
-    #bpy.context.scene.collection.children.link(new_collection)
-    #target_object_collection.objects.link(empties_collection)
-    
-
+    # print("Got ", len(tree_set), "trees")
+    # for tree in tree_set:
+    #     print(str(tree))
+    empties_collection = make_collection_for_empties(target_object)
     for tree in tree_set:
         make_empties(tree, target_object, empties_collection)
-    rig, armature = make_empty_rig(target_object)
+    rig, armature = create_empty_rig(target_object)
     for tree in tree_set:
         make_bones(tree, rig, armature)
     for tree in tree_set:
         add_bones_constraints(tree, rig, armature)
-    vertex_group = target_object.vertex_groups.new(name="__gravity_rig__")
+    vertex_group = create_vertex_group(target_object, "__gravity_rig__")
     for tree in tree_set:
         assign_vertices_to_group(tree, vertex_group, min_value, 'LINEAR' )
-    mod = target_object.modifiers.new("GravityRigCloth", 'CLOTH')
-    mod.settings.vertex_group_mass = vertex_group.name
+    create_modifier(target_object, "GravityRigCloth", vertex_group)
