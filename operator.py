@@ -52,7 +52,7 @@ class SelectReferenceObject(bpy.types.Operator):
 
 class MakeRig(bpy.types.Operator):
     bl_idname = "gravityrig.generaterig"
-    bl_label= "Gravity Rig Generate Rig"
+    bl_label= "Gravity Rig"
     bl_description = "Generate Rig Object"
     def execute(self, context):
         if (SelectReferenceObject.reference_object == None):
@@ -66,3 +66,10 @@ class MakeRig(bpy.types.Operator):
         make_gravity_rig(SelectReferenceObject.reference_object, target_object, prefs.min_value, context)
         return{'FINISHED'}
 
+class RemoveEverything(bpy.types.Operator):
+    bl_idname = "gravityrig.removeeverything"
+    bl_label= "Remove Gravity Rig"
+    bl_description = "Remove the objects created by gravity rig"
+    def execute(self, context):
+        return{'FINISHED'}
+    

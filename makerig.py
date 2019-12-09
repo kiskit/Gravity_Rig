@@ -1,5 +1,5 @@
 import bpy
-
+import math
 
 class created_objects(object):
     # static list of 
@@ -143,7 +143,9 @@ def create_empty(vertex_index, target_object, empties_collection):
     empty = bpy.data.objects.new( "empty", None )
     empties_collection.objects.link(empty)
     empty.empty_display_type = 'CUBE'
-    empty.scale = (0.25, 0.25, 0.25)
+    # seems to be about right in terms of dimensions
+    min_dimension = math.ceil(math.sqrt(min(target_object.dimensions.x, target_object.dimensions.y, target_object.dimensions.z))*10)/100
+    empty.scale =  (min_dimension, min_dimension, min_dimension)
     empty.parent = target_object
     empty.parent_type = 'VERTEX'
     # change for vertex index
@@ -312,14 +314,14 @@ def make_gravity_rig(reference_object, target_object, min_value, context):
     # for tree in tree_set:
     #     print(str(tree))
     empties_collection = make_collection_for_empties(target_object)
+    rig, armature = create_empty_rig(target_object)
+    
     for tree in tree_set:
         make_empties(tree, target_object, empties_collection)
-    rig, armature = create_empty_rig(target_object)
-    for tree in tree_set:
         make_bones(tree, rig, armature)
-    for tree in tree_set:
         add_bones_constraints(tree, rig, armature)
-    vertex_group = create_vertex_group(target_object, "__gravity_rig__")
-    for tree in tree_set:
+        vertex_group = create_vertex_group(target_object, "__gravity_rig__")
         assign_vertices_to_group(tree, vertex_group, min_value, 'LINEAR' )
+        
     create_modifier(target_object, "GravityRigCloth", vertex_group)
+    context.view_layer.objects.active = target_object

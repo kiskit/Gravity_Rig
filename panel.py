@@ -24,4 +24,6 @@ class Gravity_Rig_Panel(bpy.types.Panel):
         # row.prop(prefs, 'falloff')
         row = layout.row()
         row.operator("gravityrig.generaterig", text="(Re)generate Rig")
+        row = layout.row()
+        row.operator("gravityrig.removeeverything", text="Remove Rig")
 
