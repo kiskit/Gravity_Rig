@@ -130,7 +130,7 @@ def make_tree_set(sorted_vertices_list, vertices, edges, dictionary):
 def create_empty(vertex_index, target_object, empties_collection):
     # print(location, vertex_index, target_object)
     empty = bpy.data.objects.new( "empty", None )
-    bpy.context.scene.collection.objects.link( empty )
+    empties_collection.objects.link(empty)
     empty.empty_display_type = 'CUBE'
     empty.scale = (0.25, 0.25, 0.25)
     empty.parent = target_object
@@ -139,7 +139,7 @@ def create_empty(vertex_index, target_object, empties_collection):
     empty.parent_vertices[0] = vertex_index
     bpy.ops.object.location_clear(clear_delta=False)
     bpy.ops.object.rotation_clear(clear_delta=False)
-    empties_collection.objects.link(empty)
+ 
     created_objects.empties_list.append(empty)
     
     return empty
@@ -295,12 +295,3 @@ def make_gravity_rig(reference_object, target_object, min_value, context):
         assign_vertices_to_group(tree, vertex_group, min_value, 'LINEAR' )
     mod = target_object.modifiers.new("GravityRigCloth", 'CLOTH')
     mod.settings.vertex_group_mass = vertex_group.name
-
-    #mod.shape.
-    # Make vertex group
-    # Make collection
-    # Add cloth sim
-    # Address location issue
-    # Address modes (edit vs intial mode)
-    # Add controls (no faces, vertex #)
-    
