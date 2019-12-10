@@ -21,9 +21,7 @@ class Gravity_Rig_Panel(bpy.types.Panel):
         if (Gravity_Rig_Panel.reference_object_name != None):
             box.label(text=Gravity_Rig_Panel.reference_object_name)
         else:
-             box.label(text='Please select a reference object')
-        # row.prop(prefs, 'reference_object_name')
-        
+             box.label(text='Please select a reference object')        
         row = layout.row()
         row.prop(prefs, 'min_value')
 

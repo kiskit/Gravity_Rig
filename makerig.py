@@ -107,8 +107,6 @@ def other_vertex_in_edge(vertex_index, edge):
     
     
 def get_nodes_of_tree(dictionary, parent_node, via_edge, vertex_map_item, vertices, edges):
-    # parent_node.coordinates = vertices[vertex_map_item.vertex_index]
-    # parent_node.vertex_index = vertex_map_item.vertex_index
     # if we're on a leaf
     vertex_map_item.visited = True
     this_node = tree_node()
@@ -148,7 +146,6 @@ def create_empty(vertex_index, target_object, empties_collection, created_obj):
     empty.empty_display_type = 'CUBE'
     # seems to be about right in terms of dimensions
     min_dimension = math.ceil(math.sqrt(min_but_zero(min_but_zero(target_object.dimensions.x, target_object.dimensions.y), target_object.dimensions.z))*10) / 100
-    #min_dimension = math.ceil(math.sqrt(min(target_object.dimensions.x, target_object.dimensions.y, target_object.dimensions.z)))
     empty.scale =  (min_dimension, min_dimension, min_dimension)
     empty.parent = target_object
     empty.parent_type = 'VERTEX'
@@ -164,9 +161,8 @@ def make_empties(node, target_object, empties_collection, created_obj):
         make_empties(child, target_object, empties_collection, created_obj)
 
 def create_empty_rig(target_object, created_obj):
-    armature = bpy.data.armatures.new(target_object.name + "_vBones")
-    rig = bpy.data.objects.new(target_object.name + '_vRig', armature)
-    #rig.location = target_object.location
+    armature = bpy.data.armatures.new(target_object.name + "_arm")
+    rig = bpy.data.objects.new(target_object.name + '_rig', armature)
     rig.matrix_world = target_object.matrix_world
     armature.display_type = 'STICK'
     bpy.context.collection.objects.link(rig)
@@ -224,12 +220,10 @@ def assign_vertices_to_group(node, vertex_group, min_value, method, depth = 0):
     # leaf is always mean
     if (children_number == 0):
         add_index_to_vertex_group(vertex_group, node.vertex_index, min_value)
-        #print("assigning value of", min_value)
         return depth
     max_depth = depth
     for child in node.children:
         max_depth = max(max_depth, assign_vertices_to_group(child, vertex_group, min_value, method, depth + 1))
-    #print("Vertex ", node.coordinates, "max depth", max_depth, "depth", depth)
     if (depth == 0):
         # root is always 1
         print("Found a root", node, "value is 1")
@@ -338,14 +332,12 @@ def make_gravity_rig(reference_object, target_object, min_value, context):
     sorted_vertices_list = []
     for key, value in sorted(dictionary.items(), key=lambda item: item[1]):
         sorted_vertices_list.append(value)
-    print("------ Sorted vertices")
     for v in sorted_vertices_list:
         print(v)
-    print("------ End sorted vertices")
     tree_set = make_tree_set(sorted_vertices_list, target_object_vertices, target_object_edges, dictionary)
-    print("Got ", len(tree_set), "trees")
-    for tree in tree_set:
-         print(str(tree))
+    # print("Got ", len(tree_set), "trees")
+    # for tree in tree_set:
+    #      print(str(tree))
     empties_collection = make_collection_for_empties(target_object, created_item)
     rig, armature = create_empty_rig(target_object, created_item)
     vertex_group = create_vertex_group(target_object, '__' + target_object.name + "__gr__", created_item)

@@ -41,12 +41,10 @@ class SelectReferenceObject(bpy.types.Operator):
     bl_idname = "gravityrig.selectreference"
     bl_label= "Gravity Rig Select Reference"
     bl_description = "Select Reference Object"
-    # global attempt
     reference_object=None
 
     def execute(self, context):
         SelectReferenceObject.reference_object = bpy.context.view_layer.objects.active
-        #context.preferences.addons["GravityRig"].preferences.reference_object_name = SelectReferenceObject.reference_object.name
         Gravity_Rig_Panel.reference_object_name = SelectReferenceObject.reference_object.name
         # o = create_custom_mesh("target", (2, 2, 0))
         return{'FINISHED'}
@@ -57,6 +55,13 @@ class MakeRig(bpy.types.Operator):
     bl_description = "Generate Rig Object"
     def execute(self, context):
         if (SelectReferenceObject.reference_object == None):
+            self.report({'ERROR'}, 'No reference object selected')
+            return {'CANCELLED'}
+        try:
+            SelectReferenceObject.reference_object.name in bpy.data.objects
+        except:
+            Gravity_Rig_Panel.reference_object_name = None
+            self.report({'ERROR'}, 'No reference object selected')
             return {'CANCELLED'}
         target_object = context.view_layer.objects.active
         if (target_object == None):
@@ -65,7 +70,7 @@ class MakeRig(bpy.types.Operator):
         try: 
             make_gravity_rig(SelectReferenceObject.reference_object, target_object, prefs.min_value, context)
         except:
-            self.report('ERROR', 'Something bad happened')
+            self.report({'ERROR'}, 'Something bad happened')
             return{'CANCELLED'}
         return{'FINISHED'}
 
