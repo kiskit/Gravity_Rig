@@ -9,6 +9,7 @@ class created_objects(object):
     armature = None
     modifier = None
     vertex_group_name = None
+    target_object = None
     
 class tree_node(object):
     children: None
@@ -66,6 +67,7 @@ def init_created_objects():
     created_objects.armature = None
     created_objects.modifier = None
     created_objects.vertex_group_name = None
+    created_objects.target_object = None
       
 def make_dictionary(target_object, reference_location):
     edges = target_object.data.edges
@@ -139,20 +141,26 @@ def make_tree_set(sorted_vertices_list, vertices, edges, dictionary):
             tree_set.append(get_nodes_of_tree(dictionary, None, None, vtx_map_item, vertices, edges))
     return tree_set
 
+def min_but_zero(a ,b):
+    if (a == 0):
+        return b
+    elif (b == 0):
+        return a
+    else:
+        return min(a ,b)
+
 def create_empty(vertex_index, target_object, empties_collection):
     empty = bpy.data.objects.new( "empty", None )
     empties_collection.objects.link(empty)
     empty.empty_display_type = 'CUBE'
     # seems to be about right in terms of dimensions
-    min_dimension = math.ceil(math.sqrt(min(target_object.dimensions.x, target_object.dimensions.y, target_object.dimensions.z))*10)/100
+    min_dimension = math.ceil(math.sqrt(min_but_zero(min_but_zero(target_object.dimensions.x, target_object.dimensions.y), target_object.dimensions.z))*10) / 100
+    #min_dimension = math.ceil(math.sqrt(min(target_object.dimensions.x, target_object.dimensions.y, target_object.dimensions.z)))
     empty.scale =  (min_dimension, min_dimension, min_dimension)
     empty.parent = target_object
     empty.parent_type = 'VERTEX'
     # change for vertex index
-    empty.parent_vertices[0] = vertex_index
-    bpy.ops.object.location_clear(clear_delta=False)
-    bpy.ops.object.rotation_clear(clear_delta=False)
- 
+    empty.parent_vertices[0] = vertex_index 
     created_objects.empties_list.append(empty)
     
     return empty
@@ -200,7 +208,6 @@ def make_bones(tree, rig, armature):
     bpy.ops.object.editmode_toggle()
     make_bones_from_tree(tree, None, None, armature)
     bpy.ops.object.editmode_toggle()
-
 
 def add_bone_constraint(pose_bone, empty):
     ik = pose_bone.constraints.new(type='IK')
@@ -259,10 +266,11 @@ def create_vertex_group(target_object, vg_name):
     created_objects.vertex_group_name = vertex_group.name
     return vertex_group
 
-def cleanup_previous_rigs(target_object):
+def cleanup_previous_rigs():
     # Nearly every remove can go wrong, for instance if file->new has been called
     # so (nearly) all of them have been protected by try/except statements
     # remove empties
+    target_object = created_objects.target_object
     for obj in created_objects.empties_list:
         try:
             bpy.data.objects.remove(obj, do_unlink=True )
@@ -288,16 +296,19 @@ def cleanup_previous_rigs(target_object):
             None
     # remove vertex group
     if (created_objects.vertex_group_name != None):
-        vg = target_object.vertex_groups.get(created_objects.vertex_group_name)
-        if (vg != None):
-            target_object.vertex_groups.remove(vg)
+        try:
+            vg = target_object.vertex_groups.get(created_objects.vertex_group_name)
+            if (vg != None):
+                target_object.vertex_groups.remove(vg)
+        except:
+            None
     # reset created objects
     init_created_objects()
 
 def make_gravity_rig(reference_object, target_object, min_value, context):
     #cleanup object stuff
-    cleanup_previous_rigs(target_object)
-    
+    cleanup_previous_rigs()
+    created_objects.target_object = target_object
     target_object_edges = target_object.data.edges
     target_object_vertices = target_object.data.vertices
     reference_location = reference_object.location

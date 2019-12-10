@@ -1,6 +1,7 @@
 import bpy
 
-from . makerig import make_gravity_rig
+from . makerig import make_gravity_rig, cleanup_previous_rigs
+from . panel import Gravity_Rig_Panel
 def create_custom_mesh (name, location):
     vertex_list=[
         (-1, 0, 0), #0
@@ -44,11 +45,10 @@ class SelectReferenceObject(bpy.types.Operator):
 
     def execute(self, context):
         SelectReferenceObject.reference_object = bpy.context.view_layer.objects.active
-        context.preferences.addons["GravityRig"].preferences.reference_object_name = SelectReferenceObject.reference_object.name
+        #context.preferences.addons["GravityRig"].preferences.reference_object_name = SelectReferenceObject.reference_object.name
+        Gravity_Rig_Panel.reference_object_name = SelectReferenceObject.reference_object.name
         # o = create_custom_mesh("target", (2, 2, 0))
         return{'FINISHED'}
-
-
 
 class MakeRig(bpy.types.Operator):
     bl_idname = "gravityrig.generaterig"
@@ -60,16 +60,15 @@ class MakeRig(bpy.types.Operator):
         target_object = context.view_layer.objects.active
         if (target_object == None):
             return {'CANCELLED'}
-        print("generating rig")
         prefs = context.preferences.addons["GravityRig"].preferences
-        print("min value", prefs.min_value)
         make_gravity_rig(SelectReferenceObject.reference_object, target_object, prefs.min_value, context)
         return{'FINISHED'}
 
 class RemoveEverything(bpy.types.Operator):
-    bl_idname = "gravityrig.removeeverything"
+    bl_idname = "gravityrig.cleanuprig"
     bl_label= "Remove Gravity Rig"
     bl_description = "Remove the objects created by gravity rig"
     def execute(self, context):
+        cleanup_previous_rigs()
         return{'FINISHED'}
     
