@@ -28,6 +28,6 @@ from . panel import Gravity_Rig_Panel
 from . operator import SelectReferenceObject, MakeRig, RemoveEverything
 from . preferences import GravityRigPreferences
 
-classes = (MakeRig, SelectReferenceObject, Gravity_Rig_Panel, GravityRigPreferences)
+classes = (MakeRig, SelectReferenceObject, Gravity_Rig_Panel, GravityRigPreferences, RemoveEverything)
 register, unregister = bpy.utils.register_classes_factory(classes)
 

@@ -1,6 +1,6 @@
 import bpy
 
-from . makerig import make_gravity_rig
+from . makerig import make_gravity_rig, cleanup_previous_rigs
 def create_custom_mesh (name, location):
     vertex_list=[
         (-1, 0, 0), #0
@@ -71,5 +71,7 @@ class RemoveEverything(bpy.types.Operator):
     bl_label= "Remove Gravity Rig"
     bl_description = "Remove the objects created by gravity rig"
     def execute(self, context):
+        target_object = context.view_layer.objects.active
+        cleanup_previous_rigs(target_object)
         return{'FINISHED'}
     
