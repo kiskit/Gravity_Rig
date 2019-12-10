@@ -2,6 +2,7 @@ import bpy
 
 from . makerig import make_gravity_rig, cleanup_previous_rigs
 from . panel import Gravity_Rig_Panel
+
 def create_custom_mesh (name, location):
     vertex_list=[
         (-1, 0, 0), #0
@@ -61,7 +62,11 @@ class MakeRig(bpy.types.Operator):
         if (target_object == None):
             return {'CANCELLED'}
         prefs = context.preferences.addons["GravityRig"].preferences
-        make_gravity_rig(SelectReferenceObject.reference_object, target_object, prefs.min_value, context)
+        try: 
+            make_gravity_rig(SelectReferenceObject.reference_object, target_object, prefs.min_value, context)
+        except:
+            self.report('ERROR', 'Something bad happened')
+            return{'CANCELLED'}
         return{'FINISHED'}
 
 class RemoveEverything(bpy.types.Operator):
@@ -69,6 +74,7 @@ class RemoveEverything(bpy.types.Operator):
     bl_label= "Remove Gravity Rig"
     bl_description = "Remove the objects created by gravity rig"
     def execute(self, context):
-        cleanup_previous_rigs()
+        target_object = context.view_layer.objects.active
+        cleanup_previous_rigs(target_object)
         return{'FINISHED'}
     
