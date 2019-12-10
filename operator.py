@@ -54,9 +54,11 @@ class MakeRig(bpy.types.Operator):
     bl_label= "Gravity Rig"
     bl_description = "Generate Rig Object"
     def execute(self, context):
+        # Test that a reference object has been selected
         if (SelectReferenceObject.reference_object == None):
             self.report({'ERROR'}, 'No reference object selected')
             return {'CANCELLED'}
+        # Test that the reference object selected has not been deleted
         try:
             SelectReferenceObject.reference_object.name in bpy.data.objects
         except:
