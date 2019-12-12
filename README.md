@@ -22,6 +22,7 @@ Some Python warnings to take care of
 Weight attribution could be other than linear
 Bone number capabilty is probably limited
 We may need to parent the first bone of a chain to the first empty of that chain. Otherwise the empty is useless.
+When something is parented to rig, it tends to break the logic
 
 ## Special thanks
 Leander on blenderstackexchange for a snippet of code that helped.

@@ -71,8 +71,11 @@ class MakeRig(bpy.types.Operator):
         prefs = context.preferences.addons["GravityRig"].preferences
         try: 
             make_gravity_rig(SelectReferenceObject.reference_object, target_object, prefs.min_value, context)
+        except Exception as e:
+            self.report({'ERROR'}, str(e))
+            return{'CANCELLED'}
         except:
-            self.report({'ERROR'}, 'Something bad happened')
+            self.report({'ERROR'}, "Something bad happened")
             return{'CANCELLED'}
         return{'FINISHED'}
 

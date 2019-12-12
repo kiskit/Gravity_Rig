@@ -243,6 +243,11 @@ def make_collection_for_empties(target_object, created_obj):
     created_obj.empties_collection = empties_collection
     return empties_collection
 
+def check_modifier_doesnt_exist(target_object):
+    for value in target_object.modifiers.values():
+        if value.type == 'CLOTH':
+            raise Exception("Cloth modifier already exists")
+        
 def create_modifier(target_object, modifier_name, vertex_group, created_obj):
     mod = target_object.modifiers.new(modifier_name, 'CLOTH')
     created_obj.modifier = mod
@@ -319,6 +324,7 @@ def cleanup_previous_rigs(target_object):
 def make_gravity_rig(reference_object, target_object, min_value, context):
     #cleanup object stuff
     cleanup_previous_rigs(target_object)
+    check_modifier_doesnt_exist(target_object)
     created_item = created_object_item()
     created_item.target_object = target_object
     
